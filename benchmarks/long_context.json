@@ -1,0 +1,8 @@
+{
+  "tokens": 16000,
+  "sha256": "f1702008e5ba73b6cc03dbd967315568629fb8f3ee428ee4a5564517a779c0ec",
+  "first_error": "LOG-00931",
+  "lines": 1000,
+  "timestamp_origin": "2026-01-01T00:00:00Z",
+  "model_revision": "3885219b6810b007914f3a7950a8d1b469d598a5"
+}

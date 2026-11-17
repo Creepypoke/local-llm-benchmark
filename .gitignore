@@ -1,0 +1,38 @@
+# Downloaded sources, models, compiled binaries and installed dependencies.
+/llama.cpp/
+/models/
+/.venv/
+/venv/
+/node_modules/
+/build/
+/dist/
+*.gguf
+*.gguf.*
+
+# Local benchmark output, logs and machine-specific setup metadata.
+/reports/
+/logs/
+/VERIFICATION.md
+/config/build.json
+/config/model-lock.json
+/config/python-environment.txt
+*.log
+*.pid
+
+# Python and development tool caches.
+__pycache__/
+*.py[cod]
+/.cache/
+/.ruff_cache/
+/.pytest_cache/
+*.egg-info/
+.coverage
+htmlcov/
+
+# Local credentials and operating system files.
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+Desktop.ini

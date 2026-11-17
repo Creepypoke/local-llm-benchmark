@@ -1,0 +1,48 @@
+llama:
+  repository: https://github.com/ggml-org/llama.cpp
+  release: v1.0.0
+  commit: b1b770d90d94cad9e9ea5b993bdbc383a522fb28
+model:
+  repo: unsloth/Qwen3.5-9B-GGUF
+  revision: 3885219b6810b007914f3a7950a8d1b469d598a5
+  file: Qwen3.5-9B-UD-Q5_K_XL.gguf
+  quantization: UD-Q5_K_XL
+server:
+  host: 127.0.0.1
+  port: 18080
+  context_size: 32768
+  gpu_layers: 999
+  flash_attention: "on"
+  batch_size: 512
+  ubatch_size: 256
+  parallel: 1
+  backend: auto
+  startup_timeout: 300
+  log_verbosity: 4
+  extra_args: []
+generation:
+  temperature: 0
+  seed: 42
+  top_k: 40
+  top_p: 0.95
+  min_p: 0.05
+  repeat_penalty: 1.0
+  max_tokens: 8192
+  reasoning_budget: -1
+benchmark:
+  technical_retries: 2
+  retry_delay_seconds: 2
+  request_timeout: 1800
+  cache_policy: cache_prompt_false
+  long_context_tokens: 16000
+  long_context_tolerance: 64
+  monitor_interval: 0.25
+  p95_min_samples: 20
+validation:
+  judge_max_tokens: 2048
+  judge_max_evidence_lines: 6
+  judge_explanation_max_chars: 512
+  random_cases: 100
+  code_timeout: 20
+  scaling_sizes: [20000, 80000, 320000]
+  scaling_max_ratio: 9
