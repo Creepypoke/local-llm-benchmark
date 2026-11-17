@@ -32,12 +32,18 @@ def run(args, **kw):
 
 
 def binary():
-    choices = [
-        ROOT / "llama.cpp/build/bin/llama-server",
-        ROOT / "llama.cpp/build/bin/Release/llama-server.exe",
-        ROOT / "llama.cpp/build/bin/llama-server.exe",
-    ]
-    return next((p for p in choices if p.exists()), choices[0])
+    metadata = ROOT / "config/runtime.json"
+    if not metadata.exists():
+        raise RuntimeError(
+            "Run scripts/setup first to install the official llama.cpp binary"
+        )
+    info = json.loads(metadata.read_text(encoding="utf-8"))
+    executable = (ROOT / info["executable"]).resolve()
+    if not executable.is_relative_to((ROOT / "runtime").resolve()):
+        raise RuntimeError(
+            "Runtime executable must be inside the project runtime directory"
+        )
+    return executable
 
 
 def hardware():

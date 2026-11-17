@@ -1,4 +1,5 @@
 # Downloaded sources, models, compiled binaries and installed dependencies.
+/runtime/
 /llama.cpp/
 /models/
 /.venv/
@@ -13,6 +14,7 @@
 /reports/
 /logs/
 /VERIFICATION.md
+/config/runtime.json
 /config/build.json
 /config/model-lock.json
 /config/python-environment.txt

@@ -130,9 +130,10 @@ def main():
     client.get("/health")
     props = client.get("/props")
     models = client.get("/v1/models")
-    commit = run(["git", "-C", ROOT / "llama.cpp", "rev-parse", "HEAD"])
-    if commit != c["llama"]["commit"]:
-        raise RuntimeError("llama.cpp commit differs from config lock")
+    from llbench.install import verify
+
+    installed_runtime = verify(c)
+    commit = installed_runtime["commit"]
     if commit[:7] not in props.get("build_info", ""):
         raise RuntimeError("Running server binary differs from source commit")
     modelpath = ROOT / "models" / c["model"]["file"]
@@ -163,6 +164,7 @@ def main():
     metadata = {
         "hardware": hardware(),
         "llama_commit": commit,
+        "llama_runtime": installed_runtime,
         "benchmark_source_sha256": source_hash(),
         "llama_version": run(
             [binary(), "--version"], stderr=__import__("subprocess").STDOUT
@@ -256,6 +258,8 @@ def main():
             ROOT / "README.md",
             *sorted((ROOT / "config").glob("*.yaml")),
             ROOT / "config/model-lock.json",
+            ROOT / "config/llama-release.json",
+            ROOT / "config/runtime.json",
             ROOT / "benchmarks/tasks.json",
             ROOT / "benchmarks/long_context.txt",
             ROOT / "benchmarks/long_context.json",

@@ -155,7 +155,9 @@ def render(output, data):
         "Context_size": data["config"]["server"]["context_size"],
         "GPU_offload_requested": data["config"]["server"]["gpu_layers"],
         "Effective_server": hardware.get("effective_server"),
-        "Backend": hardware["server"].get("backend_build"),
+        "Backend": hardware["server"].get(
+            "runtime", hardware["server"].get("backend_build")
+        ),
         "status": hardware.get("status", "running"),
         "started_at": hardware["started_at"],
     }

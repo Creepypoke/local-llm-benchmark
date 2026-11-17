@@ -1,4 +1,4 @@
-import argparse, os, sys, subprocess, time, socket, platform, shutil, json
+import argparse, os, sys, subprocess, time, socket, json
 from pathlib import Path
 import httpx, psutil
 from .common import ROOT, config, dump, sha, run, binary
@@ -16,11 +16,21 @@ def process():
     s = json.loads(STATE.read_text(encoding="utf-8"))
     try:
         p = psutil.Process(s["pid"])
-        if abs(p.create_time() - s["create_time"]) < 0.01 and str(binary()) in " ".join(
-            p.cmdline()
+        executable = s.get("executable")
+        if executable is None:
+            previous = json.loads(
+                (ROOT / "logs/server-config.json").read_text(encoding="utf-8")
+            )
+            executable = previous["command"][0]
+        command = p.cmdline()
+        if (
+            abs(p.create_time() - s["create_time"]) < 0.01
+            and command
+            and Path(executable).resolve().is_relative_to(ROOT)
+            and Path(command[0]).resolve() == Path(executable).resolve()
         ):
             return p
-    except psutil.Error:
+    except (psutil.Error, OSError, KeyError, ValueError):
         pass
     return None
 
@@ -77,6 +87,9 @@ def start(c):
             raise RuntimeError(
                 "Port occupied by another process; refusing to stop it"
             ) from e
+    from .install import verify
+
+    runtime = verify(c)
     exe = binary()
     model = ROOT / "models" / c["model"]["file"]
     if not exe.exists() or not model.exists():
@@ -105,7 +118,7 @@ def start(c):
         "--ctx-size",
         str(s["context_size"]),
         "--gpu-layers",
-        str(s["gpu_layers"]),
+        str(0 if runtime["backend"] == "cpu" else s["gpu_layers"]),
         "--batch-size",
         str(s["batch_size"]),
         "--ubatch-size",
@@ -126,7 +139,9 @@ def start(c):
         "--verbosity",
         str(s["log_verbosity"]),
     ]
-    adaptations = []
+    adaptations = (
+        ["CPU binary: GPU offload set to 0"] if runtime["backend"] == "cpu" else []
+    )
     if "--flash-attn" in helptext:
         args += ["--flash-attn", str(s["flash_attention"])]
     else:
@@ -185,7 +200,14 @@ def start(c):
         startupinfo=startupinfo,
     )
     log.close()
-    dump(STATE, {"pid": p.pid, "create_time": psutil.Process(p.pid).create_time()})
+    dump(
+        STATE,
+        {
+            "pid": p.pid,
+            "create_time": psutil.Process(p.pid).create_time(),
+            "executable": str(exe),
+        },
+    )
     dump(
         ROOT / "logs/server-config.json",
         {
@@ -193,11 +215,7 @@ def start(c):
             "log_start_offset": log_start,
             "requested": s,
             "adaptations": adaptations,
-            "backend_build": json.loads(
-                (ROOT / "config/build.json").read_text(encoding="utf-8")
-            )
-            if (ROOT / "config/build.json").exists()
-            else None,
+            "runtime": runtime,
         },
     )
     deadline = time.monotonic() + s["startup_timeout"]
@@ -220,83 +238,10 @@ def start(c):
 
 def setup(c):
     if process():
-        raise RuntimeError("Stop the project server before rebuilding")
-    src = ROOT / "llama.cpp"
-    commit = c["llama"]["commit"]
-    if not src.exists():
-        subprocess.run(
-            ["git", "clone", "--no-checkout", c["llama"]["repository"], str(src)],
-            check=True,
-        )
-    try:
-        current = run(["git", "-C", src, "rev-parse", "HEAD"])
-    except subprocess.CalledProcessError:
-        current = ""
-    if current != commit:
-        subprocess.run(
-            ["git", "-C", str(src), "fetch", "--depth", "1", "origin", commit],
-            check=True,
-        )
-        subprocess.run(
-            ["git", "-C", str(src), "checkout", "--detach", commit], check=True
-        )
-    if run(["git", "-C", src, "status", "--porcelain"]):
-        raise RuntimeError("Local llama.cpp source modified; refusing to build")
-    backend = c["server"]["backend"]
-    if backend == "auto":
-        backend = (
-            "metal"
-            if platform.system() == "Darwin" and platform.machine() == "arm64"
-            else ("cuda" if shutil.which("nvcc") else "cpu")
-        )
-    if backend not in ("cpu", "cuda", "metal"):
-        raise RuntimeError("backend must be auto, cpu, cuda or metal")
-    if platform.system() == "Windows" and backend != "cuda":
-        raise RuntimeError("Windows NVIDIA setup requires CUDA Toolkit / nvcc and MSVC")
-    flags = [
-        "-DGGML_METAL=" + ("ON" if backend == "metal" else "OFF"),
-        "-DGGML_CUDA=" + ("ON" if backend == "cuda" else "OFF"),
-    ]
-    env = os.environ.copy()
-    env["PATH"] = str(Path(sys.executable).parent) + os.pathsep + env["PATH"]
-    subprocess.run(
-        [
-            "cmake",
-            "-S",
-            str(src),
-            "-B",
-            str(src / "build"),
-            "-G",
-            "Ninja",
-            "-DCMAKE_BUILD_TYPE=Release",
-            "-DLLAMA_BUILD_TESTS=OFF",
-            "-DLLAMA_CURL=OFF",
-            *flags,
-        ],
-        check=True,
-        env=env,
-    )
-    subprocess.run(
-        [
-            "cmake",
-            "--build",
-            str(src / "build"),
-            "--target",
-            "llama-server",
-            "-j",
-            str(min(os.cpu_count() or 2, 8)),
-        ],
-        check=True,
-        env=env,
-    )
-    dump(
-        ROOT / "config/build.json",
-        {
-            "backend": backend,
-            "commit": run(["git", "-C", src, "rev-parse", "HEAD"]),
-            "flags": flags,
-        },
-    )
+        raise RuntimeError("Stop the project server before installing the binary")
+    from .install import install
+
+    install(c)
     os.environ["HF_HOME"] = str(ROOT / "models/.hf-cache")
     from huggingface_hub import hf_hub_download
 

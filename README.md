@@ -1,6 +1,6 @@
 # Local LLM Benchmark
 
-Изолированная сборка llama.cpp и воспроизводимый streaming-бенчмарк Qwen3.5-9B от Unsloth. Docker и чужие установки не используются. Все модели, инструменты сборки Python, окружение, Node toolchain и результаты хранятся здесь. Системные компиляторы, Python, Git, Node.js и CUDA устанавливаются отдельно.
+Изолированная установка готового официального llama.cpp и воспроизводимый streaming-бенчмарк Qwen3.5-9B от Unsloth. Docker и чужие установки не используются. Setup автоматически определяет ОС, архитектуру и backend, скачивает готовый официальный бинарник и проверяет SHA-256 и commit. Компиляции нет. Для запуска нужны Python 3.12+, Node.js 22.13+ с npm и, для NVIDIA, установленный драйвер.
 
 ## Получение проекта
 
@@ -9,17 +9,19 @@ git clone git@github.com:Creepypoke/local-llm-benchmark.git
 cd local-llm-benchmark
 ```
 
-В Git хранятся исходники, настройки, lock-файл npm и общие входные данные бенчмарка. Модели, весь checkout и build llama.cpp, `.venv`, `node_modules`, кеши, отчёты и логи создаются локально и исключены через `.gitignore`. Файлы `config/build.json`, `config/model-lock.json` и `config/python-environment.txt` также не публикуются. Setup самостоятельно создаёт необходимые директории и метаданные сборки/модели.
+В Git хранятся исходники, настройки, manifest официальных бинарников с SHA-256, lock-файл npm и общие входные данные бенчмарка. Готовые бинарники и библиотеки в `runtime/`, модели, `.venv`, `node_modules`, кеши, отчёты и логи создаются локально и исключены через `.gitignore`. Файлы `config/runtime.json`, `config/model-lock.json` и `config/python-environment.txt` также не публикуются. Setup создаёт нужные директории и метаданные установленного бинарника/модели.
 
 `benchmarks/long_context.txt` и `benchmarks/long_context.json` включены как фиксированные тестовые данные: все компьютеры получают один и тот же вход, проверенный токенизатором модели.
 
 ## Быстрый запуск
 
-macOS Apple Silicon: Xcode Command Line Tools (`xcode-select --install`), Git, Python 3.12+ и Node.js 22.13+ с npm. Metal включается автоматически. На Intel Mac backend по умолчанию CPU.
+На всех платформах нужны Python 3.12+ и Node.js 22.13+ с npm. Git нужен только для клонирования этого проекта; можно скачать его ZIP-архив.
 
-Linux: Git, Python 3.12+ с venv, C/C++ compiler (GCC/Clang), Node.js 22.13+ с npm. NVIDIA: совместимые драйвер и CUDA Toolkit, `nvcc` в PATH. Без CUDA выбирается CPU. Проверьте `config/build.json`, чтобы случайно не сравнивать CPU с ожидаемым CUDA.
+- **macOS:** автоматически выбирается ARM64 + Metal для Apple Silicon, x64 + CPU для Intel. Xcode/Command Line Tools не нужны.
+- **Windows 11:** при наличии NVIDIA выбирается CUDA-пакет x64/ARM64, иначе CPU. CUDA runtime DLL скачиваются из официального релиза рядом с сервером. CUDA Toolkit, Visual Studio Build Tools и Windows SDK не нужны. Если Windows сообщает об отсутствующем MSVC runtime, установите Microsoft Visual C++ Redistributable.
+- **Linux:** выбирается x64/ARM64 + CUDA при наличии NVIDIA, иначе CPU. CUDA runtime `.so` также скачиваются автоматически. Linux должен быть совместим с официальными Ubuntu-бинарниками релиза (glibc и системные библиотеки). Если бинарник не запускается из-за ABI/glibc, setup сообщает ошибку; сборки или замены на другую версию нет.
 
-Windows 11 NVIDIA: Git, Python 3.12+ (`py`), Node.js 22.13+ с npm, Visual Studio 2022 Build Tools с Desktop development with C++, Windows SDK и совместимый CUDA Toolkit. Откройте **Developer PowerShell for VS 2022**, чтобы `cl.exe` и `nvcc.exe` были доступны. Скрипт откажется незаметно заменить CUDA на CPU.
+Версия CUDA выбирается из доступных пакетов по максимальной версии, которую поддерживает установленный драйвер (`nvidia-smi`). При слишком старом драйвере setup просит обновить его, не подменяя CUDA на CPU. Компиляторы, CMake, Ninja и `nvcc` не используются.
 
 ```bash
 cd local-llm-benchmark
@@ -43,11 +45,13 @@ cd local-llm-benchmark
 
 ## Зафиксированные версии
 
-На момент реализации последний GitHub release без prerelease — **v1.0.0**, опубликован 2026-11-13. Annotated tag разрешён в исходный commit **b1b770d90d94cad9e9ea5b993bdbc383a522fb28**. `target_commitish` GitHub release не заменяет SHA тега. Checkout всегда pinned; автоматическое обновление при повторе эксперимента разрушило бы воспроизводимость.
+Зафиксирован стабильный **v1.0.0**, commit **b1b770d90d94cad9e9ea5b993bdbc383a522fb28**. У стабильного релиза файл [`nightly-tag.txt`](https://github.com/ggml-org/llama.cpp/releases/download/v1.0.0/nightly-tag.txt) указывает на [`b12359`](https://github.com/ggml-org/llama.cpp/releases/tag/b12359), где опубликованы бинарники того же commit.
+
+Список поддерживаемых официальных архивов, их URL и SHA-256 хранится в `config/llama-release.json`. Setup не клонирует llama.cpp и не вызывает инструменты сборки. Архивы кешируются, распаковываются внутрь `runtime/llama.cpp/`; CUDA runtime копируется рядом с сервером. Перед активацией проверяются checksum архива, `llama-server --version` и `--list-devices`. Повторный setup использует уже установленный пакет.
 
 Модель `unsloth/Qwen3.5-9B-GGUF`, revision **3885219b6810b007914f3a7950a8d1b469d598a5**, файл `Qwen3.5-9B-UD-Q5_K_XL.gguf`, SHA-256 **96cf42ddb97f9572410a72b9ed6f2299b1e887ee08da4c2a6c01e897cfa9f673**. Скачивается только текстовая GGUF; vision/mmproj не нужен.
 
-Для нового исследования обновите release/commit в YAML после проверки [официальных releases](https://github.com/ggml-org/llama.cpp/releases/latest), перепроверьте API на новом SHA и выполните setup. Сравнение разных commit помечается как нестрогое. Переносите `config/benchmark.yaml`, `config/model-lock.json`, `package-lock.json`, `requirements.txt`, `benchmarks/tasks.json`, `benchmarks/long_context.txt` и `benchmarks/long_context.json` между устройствами.
+Для нового исследования обновите release/commit в YAML и manifest архивов с SHA-256 в `config/llama-release.json` после проверки [официальных releases](https://github.com/ggml-org/llama.cpp/releases/latest), перепроверьте API на новом SHA и выполните setup. Сравнение разных commit помечается как нестрогое. Переносите `config/benchmark.yaml`, `config/llama-release.json`, `config/model-lock.json`, `package-lock.json`, `requirements.txt`, `benchmarks/tasks.json`, `benchmarks/long_context.txt` и `benchmarks/long_context.json` между устройствами.
 
 ## Конфигурация и CLI
 
@@ -110,7 +114,7 @@ Judge получает строгую JSON-схему и отдельный ли
 
 ## Результаты и сравнение машин
 
-`reports/` по умолчанию содержит `report.md`, `report.html`, `results.csv`, `results.json`, `raw/`. HTML работает офлайн без CDN: шесть SVG-графиков, таблицы ответов/производительности/изменений MAX, все ответы и reasoning без обрезки в details, ссылки на raw. В таблице рядом с эталоном и ответами показан полный исходный промпт. Длинные задачи, включая входные 16000 токенов логов, доступны в раскрывающейся секции без обрезки. Архивные наборы с повторами по-прежнему читаются; для них репрезентативный ответ выбирается по медиане latency. `raw/source/` содержит исходники, конфигурации, задания и общий контекст с SHA-256 manifest для повторения конкретного эксперимента. Не переносите `.venv`, `node_modules` и `llama.cpp/build` между ОС: заново выполните setup. CSV — по строке на измеренный запуск; JSON содержит метаданные и агрегаты.
+`reports/` по умолчанию содержит `report.md`, `report.html`, `results.csv`, `results.json`, `raw/`. HTML работает офлайн без CDN: шесть SVG-графиков, таблицы ответов/производительности/изменений MAX, все ответы и reasoning без обрезки в details, ссылки на raw. В таблице рядом с эталоном и ответами показан полный исходный промпт. Длинные задачи, включая входные 16000 токенов логов, доступны в раскрывающейся секции без обрезки. Архивные наборы с повторами по-прежнему читаются; для них репрезентативный ответ выбирается по медиане latency. `raw/source/` содержит исходники, конфигурации, задания и общий контекст с SHA-256 manifest для повторения конкретного эксперимента. Не переносите `.venv`, `node_modules` и `runtime/` между ОС: заново выполните setup. CSV — по строке на измеренный запуск; JSON содержит метаданные и агрегаты.
 
 ```bash
 .venv/bin/python compare.py \
@@ -124,7 +128,8 @@ Judge получает строгую JSON-схему и отдельный ли
 
 ## Архитектура
 
-- `llbench/manage.py`: setup, backend, pinned build, model download, PID-safe lifecycle.
+- `llbench/manage.py`: setup, model download, PID-safe lifecycle.
+- `llbench/install.py`: определение платформы/backend, выбор официального бинарника, загрузка, SHA-256 и установка CUDA runtime.
 - `llbench/client.py`: SSE, per-request timings, TTFT, monitoring, cache verification.
 - `llbench/context.py`: один детерминированный input, токенизация сервером.
 - `llbench/validate.py`: проверки и семантическая рубрика.
