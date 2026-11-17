@@ -15,7 +15,7 @@ cd local-llm-benchmark
 
 ## Быстрый запуск
 
-На всех платформах нужны Python 3.12+ и Node.js 22.13+ с npm. Git нужен только для клонирования этого проекта; можно скачать его ZIP-архив.
+На macOS/Linux нужны Python 3.12+ и Node.js 22.13+ с npm. На Windows `setup.ps1` сам проверяет Python 3.12+ и при его отсутствии или слишком старой версии устанавливает `Python.Python.3.13` через `winget` для текущего пользователя. После установки setup продолжает работу в том же терминале; Node.js 22.13+ с npm должен быть установлен заранее. Настройки Python bootstrap находятся в `config/python-windows.json`. Если `winget` отсутствует, скрипт выдаёт инструкцию установить Microsoft App Installer. Git нужен только для клонирования этого проекта; можно скачать его ZIP-архив.
 
 - **macOS:** автоматически выбирается ARM64 + Metal для Apple Silicon, x64 + CPU для Intel. Xcode/Command Line Tools не нужны.
 - **Windows 11:** при наличии NVIDIA выбирается CUDA-пакет x64/ARM64, иначе CPU. CUDA runtime DLL скачиваются из официального релиза рядом с сервером. CUDA Toolkit, Visual Studio Build Tools и Windows SDK не нужны. Если Windows сообщает об отсутствующем MSVC runtime, установите Microsoft Visual C++ Redistributable.
@@ -143,3 +143,5 @@ Judge получает строгую JSON-схему и отдельный ли
 Прогресс текущего полного прогона: `.venv/bin/python scripts/status.py` или `./scripts/status.sh`; журнал `logs/full-benchmark.log`. HTML можно открывать ещё до окончания: он обновляется после каждого завершённого измерения. Статус `running` не означает завершённый полный эксперимент.
 
 Проверка артефактов: `.venv/bin/python scripts/verify-results.py reports --expected-runs 18`. Проверка разработки: `.venv/bin/pip install -r requirements-dev.txt`, затем `.venv/bin/ruff check --select E9,F benchmark.py compare.py llbench scripts/status.py scripts/verify-results.py tests`.
+
+Проверки Windows bootstrap без установки ПО: `powershell -NoProfile -File tests/test-setup.ps1` (либо `pwsh -NoProfile -File tests/test-setup.ps1`).

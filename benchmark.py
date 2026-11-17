@@ -259,6 +259,7 @@ def main():
             *sorted((ROOT / "config").glob("*.yaml")),
             ROOT / "config/model-lock.json",
             ROOT / "config/llama-release.json",
+            ROOT / "config/python-windows.json",
             ROOT / "config/runtime.json",
             ROOT / "benchmarks/tasks.json",
             ROOT / "benchmarks/long_context.txt",

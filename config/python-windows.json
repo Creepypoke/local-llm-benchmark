@@ -1,0 +1,5 @@
+{
+  "minimum_major": 3,
+  "minimum_minor": 12,
+  "winget_package": "Python.Python.3.13"
+}
